@@ -95,3 +95,8 @@ Consulte [`infrastructure/supabase_setup.md`](infrastructure/supabase_setup.md) 
 ## 6. Modo Automático (Simulação e API Oficial da Meta)
 
 Por padrão, `WHATSAPP_PROVIDER_MODE=simulation` está ativo no backend. Nesse modo, campanhas configuradas como automáticas simulam o envio sem fazer chamadas externas e exibem claramente que nenhuma mensagem real foi enviada. Quando você possuir uma conta oficial da Meta, basta preencher as variáveis `META_WHATSAPP_*` no `backend/.env`.
+
+## 7. Deploy na Vercel
+
+O repositório já inclui `vercel.json`, `api/index.py` e `requirements.txt` configurados na raiz para deploy completo (Frontend Vite + Backend FastAPI Serverless). Veja o passo a passo e as variáveis recomendadas (incluindo `DATABASE_MODE=supabase`) em [`docs/vercel_deploy.md`](docs/vercel_deploy.md).
+

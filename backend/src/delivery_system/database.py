@@ -7,8 +7,9 @@ from typing import Any
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
-from delivery_system.config import Settings, get_settings
+from delivery_system.config import Settings, get_settings, is_vercel_runtime
 
 
 class Base(DeclarativeBase):
@@ -37,6 +38,8 @@ def create_app_engine(settings: Settings | None = None) -> Engine:
     }
     if not is_sqlite:
         engine_kwargs["pool_pre_ping"] = True
+        if is_vercel_runtime():
+            engine_kwargs["poolclass"] = NullPool
 
     engine = create_engine(database_url, **engine_kwargs)
 

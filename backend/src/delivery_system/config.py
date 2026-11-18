@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -9,6 +10,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_SQLITE_PATH = BACKEND_ROOT / "data" / "delivery_system.db"
+VERCEL_SQLITE_PATH = Path("/tmp/delivery_system.db")
+
+
+def is_vercel_runtime() -> bool:
+    return os.environ.get("VERCEL") == "1"
 
 
 class Settings(BaseSettings):
@@ -44,6 +50,12 @@ class Settings(BaseSettings):
 
     def resolved_database_url(self) -> str:
         if self.database_mode == "local":
+            if is_vercel_runtime():
+                url = (self.database_url or "").strip()
+                if url.startswith("sqlite:////tmp/"):
+                    return url
+                return f"sqlite:///{VERCEL_SQLITE_PATH}"
+
             url = (self.database_url or "").strip()
             if not url or not url.startswith("sqlite"):
                 url = f"sqlite:///{DEFAULT_LOCAL_SQLITE_PATH}"
@@ -60,12 +72,21 @@ class Settings(BaseSettings):
                 "DATABASE_MODE está definido como 'supabase', mas DATABASE_URL "
                 "não aponta para um banco PostgreSQL válido."
             )
-        if url.startswith("postgresql://") and "+psycopg" not in url:
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif url.startswith("postgresql://") and "+psycopg" not in url:
             url = url.replace("postgresql://", "postgresql+psycopg://", 1)
         return url
 
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        for env_key in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL"):
+            host = os.environ.get(env_key, "").strip()
+            if host:
+                origin = host if host.startswith("http") else f"https://{host}"
+                if origin not in origins:
+                    origins.append(origin)
+        return origins
 
     def has_meta_credentials(self) -> bool:
         return bool(
